@@ -154,7 +154,18 @@ export class RdbmsSchemaBuilder implements SchemaBuilder {
      * Returns only entities that should be synced in the database.
      */
     protected get entityToSyncMetadatas(): EntityMetadata[] {
-        return this.connection.entityMetadatas.filter(metadata => metadata.synchronize && metadata.tableType !== "entity-child" && metadata.tableType !== "view");
+        const metadatas = this.connection.entityMetadatas
+            .filter(metadata => metadata.synchronize && metadata.tableType !== "entity-child" && metadata.tableType !== "view");
+
+        // in case the same table defined as a regular table and junction table give priority to the regular one
+        const regularTablePaths = metadatas
+            .filter((metadata) => metadata.tableType === "regular")
+            .map((metadata) => this.getTablePath(metadata));
+        return metadatas.filter(
+            (metadata) =>
+                metadata.tableType !== "junction" ||
+                !regularTablePaths.includes(this.getTablePath(metadata))
+        );
     }
 
     /**
